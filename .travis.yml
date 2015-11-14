@@ -1,0 +1,25 @@
+language: generic
+sudo: false
+env:
+  matrix:
+  # - EMACS_VERSION=24.3
+    - EMACS_VERSION=24.5
+    - EMACS_VERSION=snapshot
+  global:
+    - EMACSCONFFLAGS='--with-x-toolkit=no --without-x --without-all --with-xml2 CFLAGS= CXXFLAGS='
+before_install:
+  # Configure $PATH: Executables are installed to $HOME/bin
+  - export PATH="$HOME/bin:$PATH"
+  - . travis-steps.sh
+  - download
+  - unpack
+  - autogen
+  - configure
+  - do_make lib
+  - do_make lib-src
+  - do_make src
+  - do_make lisp
+  - do_make info
+  - do_make install
+script:
+  - emacs --version
