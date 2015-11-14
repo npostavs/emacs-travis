@@ -5,8 +5,6 @@ env:
   # - EMACS_VERSION=24.3
     - EMACS_VERSION=24.5
     - EMACS_VERSION=snapshot
-  global:
-    - EMACSCONFFLAGS='--with-x-toolkit=no --without-x --without-all --with-xml2 CFLAGS= CXXFLAGS='
 before_install:
   # Configure $PATH: Executables are installed to $HOME/bin
   - export PATH="$HOME/bin:$PATH"

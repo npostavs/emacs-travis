@@ -1,5 +1,7 @@
 # source me!
 
+EMACSCONFFLAGS=(--with-x-toolkit=no --without-x --without-all --with-xml2 CFLAGS='-O2 -march=native')
+
 if [ $EMACS_VERSION = 24.5 ] ; then
 download() {
     curl -o "/tmp/emacs-${EMACS_VERSION}.tar.gz" "https://ftp.gnu.org/gnu/emacs/emacs-${EMACS_VERSION}.tar.gz"
@@ -20,7 +22,7 @@ autogen() {
 fi
 
 configure() {
-    cd '/tmp/emacs' && ./configure --quiet --enable-silent-rules --prefix="${HOME}" ${EMACSCONFFLAGS}
+    cd '/tmp/emacs' && ./configure --quiet --enable-silent-rules --prefix="${HOME}" "${EMACSCONFFLAGS[@]}"
 }
 
 do_make() {
@@ -28,5 +30,6 @@ do_make() {
 }
 
 # show definitions for log
+printf ' (%s)' "${EMACSCONFFLAGS[@]}"
 declare -f download unpack autogen configure do_make
 
