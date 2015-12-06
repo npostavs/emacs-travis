@@ -2,24 +2,23 @@
 
 EMACSCONFFLAGS=(--with-x-toolkit=no --without-x --without-all --with-xml2 CFLAGS='-O2 -march=native')
 
-if [ $EMACS_VERSION = 24.5 ] ; then
+if [ $EMACS_VERSION = master ] ; then
+    revname=master
+else
+    revname=emacs-$EMACS_VERSION
+fi
+
 download() {
-    curl -o "/tmp/emacs-${EMACS_VERSION}.tar.gz" "https://ftp.gnu.org/gnu/emacs/emacs-${EMACS_VERSION}.tar.gz"
+    url=https://github.com/emacs-mirror/emacs/archive
+    curl -Lo "/tmp/emacs-${EMACS_VERSION}.tar.gz" "$url/$revname.tar.gz"
 }
 unpack() {
     tar xzf "/tmp/emacs-${EMACS_VERSION}.tar.gz" -C /tmp
-    mv /tmp/emacs-${EMACS_VERSION} /tmp/emacs
+    mv /tmp/emacs-$revname /tmp/emacs
 }
-autogen() { :; }
-else
-download() {
-    git clone --depth=1 'http://git.sv.gnu.org/r/emacs.git' /tmp/emacs
-}
-unpack() { :; }
 autogen() {
     cd /tmp/emacs && ./autogen.sh
 }
-fi
 
 configure() {
     cd '/tmp/emacs' && ./configure --quiet --enable-silent-rules --prefix="${HOME}" "${EMACSCONFFLAGS[@]}"

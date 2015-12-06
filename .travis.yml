@@ -4,7 +4,8 @@ env:
   matrix:
   # - EMACS_VERSION=24.3
     - EMACS_VERSION=24.5
-    - EMACS_VERSION=snapshot
+    - EMACS_VERSION=25
+    - EMACS_VERSION=master
 before_install:
   # Configure $PATH: Executables are installed to $HOME/bin
   - export PATH="$HOME/bin:$PATH"
@@ -18,6 +19,6 @@ before_install:
   - do_make src
   - do_make lisp
   - do_make info
-  - do_make install
+  - do_make install | grep -E '^(make|[A-Z])'
 script:
   - emacs --version
