@@ -4,12 +4,16 @@ env:
   matrix:
   # - EMACS_VERSION=24.3
     - EMACS_VERSION=24.5
-    - EMACS_VERSION=25
-    - EMACS_VERSION=master
+  # - EMACS_VERSION=25
+  # - EMACS_VERSION=master
+  global:
+    # travis encrypt github_token=<emacs-builder token>
+    - secure: "cs+7xnDoZG+xg8cxB8v4sT2l+FXxHhLt8YLOP8la/+yLHJE390y8hEZFCNVysbKobBGiuRAVUkrNlc0nfyWoTq5rC1DVZNzJeRma+e9YSwQnLIDnBU5YEM2TZoY+5HIzlG0zJld00DYD7W3UekuiLKGcmM7yS80DEcMMq9d6wPBy07dhgFaLh11GNxYxq1YFMxhC19D67DvVRV43rimEBh3EgpdjYOiO11TdSvi50rE0lC4m/y/LKTOn9ytdpS0JNEruHe+MdS5F3sQezEteDYiPzPzhqwx65+rxXghHemBEHneb2MQZVRz+LTn7fjGPQXjd5snY3AZk85vd91C9l73HeyhI/YY3o0Coaxhu2g/PiKVCPn2irXF5GAGKsOc/nHd94phID+hRpqfno7OWkbPJBI7N908MKK8QtZsMfSM7cEpLOvGEbh4meJFmuhX7Zg8XtvzKxpAxIFEQ6dPkoNy3fAQ7r3a9aWScIOiLvf4Lt1aN4CoYCO/JbWw0xqYY3ZYCuX0kiIQyOkZ8KrzF6Tramj4JYl2u0OhLLdnLVWmTYFHcY1tYyLUK+6+3aEgJWjmSwNzgQJjrg704ZYBatYG9aHKw39gacTSQsdKkq3E8YUPc929GAraJvLXvEfeatvBJRmqj5T6EGMrNrbuGOOGbY8CPXd2uTrrlwQchW70="
 before_install:
-  # Configure $PATH: Executables are installed to $HOME/bin
-  - export PATH="$HOME/bin:$PATH"
+  # Configure $PATH: Emacs installed to /tmp/emacs
+  - export PATH=/tmp/emacs/bin:${PATH}
   - . travis-steps.sh
+  - get_jq
   - download
   - unpack
   - autogen
@@ -20,5 +24,12 @@ before_install:
   - do_make lisp
   - do_make info
   - do_make install | grep -E '^(make|[A-Z])'
+  - packed_file=$(pack)
+  - upload "${packed_file}"
 script:
   - emacs --version
+
+notifications:
+  email:
+    on_success: never
+    on_failure: never
