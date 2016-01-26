@@ -1,9 +1,11 @@
 #!/source/me/in/bash
 
 prefix=/tmp/emacs
-srcdir=/tmp/emacs-src
-EMACSCONFFLAGS=(--with-x-toolkit=no --without-x --without-all
-                --with-xml2 CFLAGS='-O2 -march=native' --prefix="${prefix}")
+srcdir=/tmp/emacs-${EMACS_REV}
+EMACSCONFFLAGS=(--with-x-toolkit=no --without-x
+                # makeinfo is not available on the Travis VMs.
+                --without-makeinfo
+                CFLAGS='-O2 -march=native' --prefix="${prefix}")
 
 CURL() {
     curl --silent --show-error --location "$@"
@@ -15,19 +17,12 @@ POST_FILE() {
 gh_auth=(-H "Authorization: token ${github_token}")
 gh_path=https://api.github.com/repos/npostavs/emacs-travis
 
-if [ "$EMACS_VERSION" = master ] ; then
-    revname=master
-else
-    revname=emacs-${EMACS_VERSION}
-fi
-
 download() {
     url=https://github.com/emacs-mirror/emacs/archive
-    CURL -o "/tmp/emacs-${EMACS_VERSION}.tar.gz" "$url/$revname.tar.gz"
+    CURL -o "/tmp/${EMACS_REV}.tar.gz" "$url/${EMACS_REV}.tar.gz"
 }
 unpack() {
-    tar xzf "/tmp/emacs-${EMACS_VERSION}.tar.gz" -C /tmp
-    mv "/tmp/emacs-${revname}" "${srcdir}"
+    tar xzf "/tmp/${EMACS_REV}.tar.gz" -C /tmp
 }
 autogen() {
     cd "${srcdir}" && ./autogen.sh
@@ -53,8 +48,9 @@ get_jq() {
 }
 
 pack() {
-    local file=/tmp/emacs-bin-${EMACS_VERSION}.tar.gz
-    tar -czf "$file" "${prefix}" &&
+    version=$(echo $EMACS_REV | sed 's/^emacs-//')
+    local file=/tmp/emacs-bin-${version}.tar.gz
+    tar -caPf "$file" "${prefix}" &&
         echo "$file"
 }
 
@@ -71,12 +67,18 @@ upload() {
 map(select(.name == \"Binaries\")) | .[0] | (.upload_url / \"{?\" | .[0]), (.assets |
 map(select(.name == \"$name\")) | .[0] | .id,.created_at)")
     echo "url: $url,  id: $old_id, date: $old_date" >&2
+
     if [ "$old_id" != null ] ; then
-        # rename old version
-        echo renaming old version... >&2
-        CURL --request PATCH "${gh_auth[@]}" $gh_path/releases/assets/$old_id --data \
-             "{\"name\": \"$name-$old_date\", \"label\": \"$label from $old_date\"}"
+        if [ "$DISPOSE_OLD_BY" == rename ] ; then
+            echo renaming old version... >&2
+            CURL --request PATCH "${gh_auth[@]}" $gh_path/releases/assets/$old_id --data \
+                 "{\"name\": \"$name-$old_date\", \"label\": \"$label from $old_date\"}"
+        elif [ "$DISPOSE_OLD_BY" == delete ] ; then
+            echo deleting old version... >&2
+            CURL --request DELETE "${gh_auth[@]}" $gh_path/releases/assets/$old_id
+        fi
     fi
+
     # upload the new version
     echo uploading... >&2
     POST_FILE "${filename}" -i "${gh_auth[@]}" "${url}?name=${name}&label=${label}"
