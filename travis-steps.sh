@@ -25,7 +25,9 @@ unpack() {
     tar xzf "/tmp/${EMACS_REV}.tar.gz" -C /tmp
 }
 autogen() {
-    cd "${srcdir}" && ./autogen.sh
+    # Emacs 23.4 (and lower) have ./configure checked in to the
+    # repository already.
+    cd "${srcdir}" && [ -x ./configure ] || ./autogen.sh
 }
 
 configure() {
