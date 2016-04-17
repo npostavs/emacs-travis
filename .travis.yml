@@ -20,11 +20,7 @@ before_install:
   - unpack
   - autogen
   - configure
-  - do_make lib
-  - do_make lib-src
-  - do_make src
-  - do_make lisp
-  - do_make info
+  - do_make
   - do_make install | grep -E '^(make|[A-Z])'
   - packed_file=$(pack)
   - upload "${packed_file}"
