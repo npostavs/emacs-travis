@@ -8,17 +8,44 @@ EMACSCONFFLAGS=(--with-x-toolkit=no --without-x
                 # needed for Emacs 23.4 and lower
                 --with-crt-dir=/usr/lib/x86_64-linux-gnu
                 CFLAGS='-O2 -march=native' --prefix="${prefix}")
+: ${EMACS_VERSION:=$(echo $EMACS_REV | sed 's/^emacs-//')}
+EMACS_TARBALL=emacs-bin-${EMACS_VERSION}.tar.gz
 
 CURL() {
     curl --silent --show-error --location "$@"
 }
 POST_FILE() {
-     CURL -H 'Content-Type: application/octet-stream' --request POST --upload-file "$@"
+    CURL -H 'Content-Type: application/octet-stream' --request POST \
+         "${gh_auth[@]}" --upload-file "$@"
 }
 
 gh_auth=(-H "Authorization: token ${github_token}")
-gh_path=https://api.github.com/repos/npostavs/emacs-travis
+mirror_path=https://api.github.com/repos/emacs-mirror/emacs
+binrel_path=https://api.github.com/repos/npostavs/emacs-travis
 
+check_freshness() {
+    CURL "${gh_auth[@]}" $binrel_path/releases |
+        JQ 'map(select(.name == "Binaries")) | .[0]' > /tmp/releases.json
+    read -r name old_bin_date old_bin_hash < <(JQ --raw-output --arg name $EMACS_TARBALL '
+        .assets | map(select(.name == $name)) | .[0].label' /tmp/releases.json)
+    { read -r emacs_rev_date; read -r emacs_rev_hash; } < <(
+        CURL "$mirror_path/commits?sha=${EMACS_REV}&per_page=1" |
+            jq --raw-output '.[0] | (.commit.committer.date, .sha)')
+    if [ -z "$old_bin_date" ] ; then
+        old_bin_date=never
+    fi
+    if [ "$old_bin_date" != never ] &&
+           (($(date --date=$emacs_rev_date +%s) - $(date --date=$old_bin_date +%s)
+             < 7*24*60*60))
+    then
+        echo "${EMACS_REV} is sufficiently up to date." 1>&2
+        echo "(it was last built ${old_bin_date}, source is from ${emacs_rev_date})" 1>&2
+        exit 0
+    else
+        echo "${EMACS_REV} will be rebuilt." 1>&2
+        echo "(it was last built ${old_bin_date}, source is from ${emacs_rev_date})" 1>&2
+    fi
+}
 download() {
     url=https://github.com/emacs-mirror/emacs/archive
     CURL -o "/tmp/${EMACS_REV}.tar.gz" "$url/${EMACS_REV}.tar.gz"
@@ -52,44 +79,36 @@ get_jq() {
 }
 
 pack() {
-    version=$(echo $EMACS_REV | sed 's/^emacs-//')
-    local file=/tmp/emacs-bin-${version}.tar.gz
-    tar -caPf "$file" "${prefix}" &&
-        echo "$file"
+    tar -caPf "/tmp/$EMACS_TARBALL" "${prefix}"
 }
 
-# upload <filename> [label]
-# Link will be at https://github.com/:user/:repo/releases/download/:tag/$(basename <filename>)
-# [label] will be used the "pretty name" of the link (set to $(basename <filename>) if not given).
 upload() {
-    local filename=$1
-    local name=$(basename "$filename")
-    local label=${2:-$name}
-    { read -r url; read -r old_id; read -r old_date;
-    } < <(CURL "${gh_auth[@]}" $gh_path/releases |
-                 JQ --raw-output "
-map(select(.name == \"Binaries\")) | .[0] | (.upload_url / \"{?\" | .[0]), (.assets |
-map(select(.name == \"$name\")) | .[0] | .id,.created_at)")
-    echo "url: $url,  id: $old_id, date: $old_date" >&2
+    read -r url < <(JQ --raw-output '.upload_url / "{?" | .[0]' /tmp/releases.json)
 
-    if [ "$old_id" != null ] ; then
+    if [ "$old_bin_date" != never ] ; then
+        read -r old_bin_id < <(JQ --raw-output --arg name $EMACS_TARBALL '
+            .[0].assets | map(select(.name == $name)) | .[0].id' /tmp/releases.json)
         if [ "$DISPOSE_OLD_BY" == rename ] ; then
             echo renaming old version... >&2
-            CURL --request PATCH "${gh_auth[@]}" $gh_path/releases/assets/$old_id --data \
+            CURL --request PATCH "${gh_auth[@]}" $binrel_path/releases/assets/$old_bin_id --data \
                  "{\"name\": \"$name-$old_date\", \"label\": \"$label from $old_date\"}"
         elif [ "$DISPOSE_OLD_BY" == delete ] ; then
             echo deleting old version... >&2
-            CURL --request DELETE "${gh_auth[@]}" $gh_path/releases/assets/$old_id
+            CURL --request DELETE "${gh_auth[@]}" $binrel_path/releases/assets/$old_bin_id
         fi
     fi
 
     # upload the new version
     echo uploading... >&2
-    POST_FILE "${filename}" -i "${gh_auth[@]}" "${url}?name=${name}&label=${label}"
+    POST_FILE "/tmp/$EMACS_TARBALL" "${url}" -i --get \
+              --data-urlencode "name=$EMACS_TARBALL" \
+              --data-urlencode "label=$EMACS_TARBALL $emacs_rev_date $emacs_rev_hash"
 }
 
 # show definitions for log
 printf ' (%s)' "${EMACSCONFFLAGS[@]}"
-printf ' gh_path: (%s)' "${EMACSCONFFLAGS[@]}"
+printf ' Binary releases path:  (%s)' "$binrel_path"
+printf ' Emacs src mirror path: (%s)' "$mirror_path"
+printf ' VERSION: %s, TARBALL: %s' "$EMACS_VERSION" "$EMACS_TARBALL"
 printf '\n'
 declare -f download unpack autogen configure do_make get_jq pack upload

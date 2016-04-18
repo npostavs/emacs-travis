@@ -7,6 +7,9 @@ env:
     - EMACS_REV=emacs-24.2
     - EMACS_REV=emacs-24.3
     - EMACS_REV=emacs-24.5
+    - EMACS_REV=emacs-25.0.93 EMACS_VERSION=25-prerelease
+    - EMACS_REV=emacs-25
+    - EMACS_REV=master
   global:
     - DISPOSE_OLD_BY=delete
     # travis encrypt github_token=<emacs-builder token>
@@ -16,14 +19,15 @@ before_install:
   - export PATH=/tmp/emacs/bin:${PATH}
   - . travis-steps.sh
   - get_jq
+  - check_freshness
   - download
   - unpack
   - autogen
   - configure
   - do_make
   - do_make install | grep -E '^(make|[A-Z])'
-  - packed_file=$(pack)
-  - upload "${packed_file}"
+  - pack
+  - upload
 script:
   - emacs --version
 
