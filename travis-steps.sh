@@ -5,6 +5,8 @@ srcdir=/tmp/emacs-${EMACS_REV}
 EMACSCONFFLAGS=(--with-x-toolkit=no --without-x
                 # makeinfo is not available on the Travis VMs.
                 --without-makeinfo
+                # needed for Emacs 23.4 and lower
+                --with-crt-dir=/usr/lib/x86_64-linux-gnu
                 CFLAGS='-O2 -march=native' --prefix="${prefix}")
 
 CURL() {
