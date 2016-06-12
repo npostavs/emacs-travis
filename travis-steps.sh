@@ -33,7 +33,6 @@ mirror_path=https://api.github.com/repos/emacs-mirror/emacs
 binrel_path=https://api.github.com/repos/npostavs/emacs-travis
 
 check_freshness() {
-    set -x
     CURL "${gh_auth[@]}" $binrel_path/releases |
         JQ 'map(select(.name == "Binaries")) | .[0]' > /tmp/releases.json
     cat /tmp/releases.json
@@ -44,10 +43,13 @@ check_freshness() {
             jq --raw-output '.[0] | (.commit.committer.date, .sha)')
     if [ -z "$old_bin_date" ] ; then
         old_bin_date=never
+    else
+        ((date_diff=
+          $(date --date=$emacs_rev_date +%s) -
+          $(date --date=$old_bin_date   +%s) ))
+        echo "date_diff = $date_diff"
     fi
-    if [ "$old_bin_date" != never ] &&
-           (($(date --date=$emacs_rev_date +%s) - $(date --date=$old_bin_date +%s)
-             < 7*24*60*60))
+    if [ "$old_bin_date" != never ] && ((date_diff < 7*24*60*60))
     then
         echo "${EMACS_REV} is sufficiently up to date." 1>&2
         echo "(it was last built ${old_bin_date}, source is from ${emacs_rev_date})" 1>&2
@@ -56,7 +58,6 @@ check_freshness() {
         echo "${EMACS_REV} will be rebuilt." 1>&2
         echo "(it was last built ${old_bin_date}, source is from ${emacs_rev_date})" 1>&2
     fi
-    set +x
 }
 download() {
     url=https://github.com/emacs-mirror/emacs/archive
