@@ -80,6 +80,7 @@ get_jq() {
 
 pack() {
     tar -caPf "/tmp/$EMACS_TARBALL" "${prefix}"
+    ls -lh "/tmp/$EMACS_TARBALL"
 }
 
 upload() {
@@ -87,22 +88,23 @@ upload() {
 
     if [ "$old_bin_date" != never ] ; then
         read -r old_bin_id < <(JQ --raw-output --arg name $EMACS_TARBALL '
-            .[0].assets | map(select(.name == $name)) | .[0].id' /tmp/releases.json)
+            .assets | map(select(.name == $name)) | .[0].id' /tmp/releases.json)
         if [ "$DISPOSE_OLD_BY" == rename ] ; then
-            echo renaming old version... >&2
+            echo "renaming old version... (id=$old_bin_id)" >&2
             CURL --request PATCH "${gh_auth[@]}" $binrel_path/releases/assets/$old_bin_id --data \
                  "{\"name\": \"$name-$old_date\", \"label\": \"$label from $old_date\"}"
         elif [ "$DISPOSE_OLD_BY" == delete ] ; then
-            echo deleting old version... >&2
+            echo "deleting old version... (id=$old_bin_id)" >&2
             CURL --request DELETE "${gh_auth[@]}" $binrel_path/releases/assets/$old_bin_id
         fi
     fi
 
     # upload the new version
-    echo uploading... >&2
+    echo "uploading... $EMACS_TARBALL $emacs_rev_date ${emacs_rev_hash:0:8}" >&2
     POST_FILE "/tmp/$EMACS_TARBALL" "${url}" -i --get \
               --data-urlencode "name=$EMACS_TARBALL" \
-              --data-urlencode "label=$EMACS_TARBALL $emacs_rev_date $emacs_rev_hash"
+              --data-urlencode \
+              "label=$EMACS_TARBALL $emacs_rev_date ${emacs_rev_hash:0:8}"
 }
 
 # show definitions for log
