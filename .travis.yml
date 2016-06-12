@@ -17,7 +17,7 @@ env:
 before_install:
   # Configure $PATH: Emacs installed to /tmp/emacs
   - export PATH=/tmp/emacs/bin:${PATH}
-  - . travis-steps.sh
+  - . travis-steps.sh "$EMACS_REV" "$EMACS_VERSION" "$github_token"
   - get_jq
   - check_freshness
   - download

@@ -1,5 +1,10 @@
 #!/source/me/in/bash
 
+EMACS_REV=$1
+EMACS_VERSION=${2:-$(echo $EMACS_REV | sed 's/^emacs-//')}
+github_token=$3
+
+
 prefix=/tmp/emacs
 srcdir=/tmp/emacs-${EMACS_REV}
 EMACSCONFFLAGS=(--with-x-toolkit=no --without-x
@@ -8,7 +13,7 @@ EMACSCONFFLAGS=(--with-x-toolkit=no --without-x
                 # needed for Emacs 23.4 and lower
                 --with-crt-dir=/usr/lib/x86_64-linux-gnu
                 CFLAGS='-O2 -march=native' --prefix="${prefix}")
-: ${EMACS_VERSION:=$(echo $EMACS_REV | sed 's/^emacs-//')}
+
 EMACS_TARBALL=emacs-bin-${EMACS_VERSION}.tar.gz
 
 CURL() {
@@ -19,13 +24,19 @@ POST_FILE() {
          "${gh_auth[@]}" --upload-file "$@"
 }
 
-gh_auth=(-H "Authorization: token ${github_token}")
+if [ -n "$github_token" ] ; then
+    gh_auth=(-H "Authorization: token ${github_token}")
+else
+    gh_auth=()
+fi
 mirror_path=https://api.github.com/repos/emacs-mirror/emacs
 binrel_path=https://api.github.com/repos/npostavs/emacs-travis
 
 check_freshness() {
+    set -x
     CURL "${gh_auth[@]}" $binrel_path/releases |
         JQ 'map(select(.name == "Binaries")) | .[0]' > /tmp/releases.json
+    cat /tmp/releases.json
     read -r name old_bin_date old_bin_hash < <(JQ --raw-output --arg name $EMACS_TARBALL '
         .assets | map(select(.name == $name)) | .[0].label' /tmp/releases.json)
     { read -r emacs_rev_date; read -r emacs_rev_hash; } < <(
@@ -45,6 +56,7 @@ check_freshness() {
         echo "${EMACS_REV} will be rebuilt." 1>&2
         echo "(it was last built ${old_bin_date}, source is from ${emacs_rev_date})" 1>&2
     fi
+    set +x
 }
 download() {
     url=https://github.com/emacs-mirror/emacs/archive
@@ -67,16 +79,20 @@ do_make() {
     make -j2 -C "${srcdir}" V=0 "$@"
 }
 
-JQ=/tmp/bin/jq
 JQ() {
     "${JQ}" "$@"
 }
-get_jq() {
-    mkdir -p "$(dirname "${JQ}")"
-    CURL -o "${JQ}" https://stedolan.github.io/jq/download/linux64/jq &&
-        chmod +x "${JQ}" &&
-        JQ --version
-}
+if JQ=$(which jq) ; then
+    get_jq() { JQ --version; }
+else
+    JQ=/tmp/bin/jq
+    get_jq() {
+        mkdir -p "$(dirname "${JQ}")"
+        CURL -o "${JQ}" https://stedolan.github.io/jq/download/linux64/jq &&
+            chmod +x "${JQ}" &&
+            JQ --version
+    }
+fi
 
 pack() {
     tar -caPf "/tmp/$EMACS_TARBALL" "${prefix}"
@@ -109,8 +125,9 @@ upload() {
 
 # show definitions for log
 printf ' (%s)' "${EMACSCONFFLAGS[@]}"
-printf ' Binary releases path:  (%s)' "$binrel_path"
-printf ' Emacs src mirror path: (%s)' "$mirror_path"
-printf ' VERSION: %s, TARBALL: %s' "$EMACS_VERSION" "$EMACS_TARBALL"
+printf '\n Binary releases path:  (%s)\n' "$binrel_path"
+printf ' Emacs src mirror path: (%s)\n' "$mirror_path"
+printf ' VERSION: %s, TARBALL: %s\n' "$EMACS_VERSION" "$EMACS_TARBALL"
+printf ' JQ = %s\n' "$JQ"
 printf '\n'
-declare -f download unpack autogen configure do_make get_jq pack upload
+#declare -f download unpack autogen configure do_make get_jq pack upload
