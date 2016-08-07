@@ -17,7 +17,7 @@ EMACSCONFFLAGS=(--with-x-toolkit=no --without-x
 EMACS_TARBALL=emacs-bin-${EMACS_VERSION}.tar.gz
 
 CURL() {
-    curl --silent --show-error --location "$@"
+    curl --dump-header >(head -1 1>&2) --silent --show-error --location "$@"
 }
 POST_FILE() {
     CURL -H 'Content-Type: application/octet-stream' --request POST \
@@ -33,9 +33,15 @@ mirror_path=https://api.github.com/repos/emacs-mirror/emacs
 binrel_path=https://api.github.com/repos/npostavs/emacs-travis
 
 check_freshness() {
-    CURL "${gh_auth[@]}" $binrel_path/releases |
+    echo null > /tmp/NULL.json
+    CURL "${gh_auth[@]}" $binrel_path/releases | tee /tmp/all-release.json |
         JQ 'map(select(.name == "Binaries")) | .[0]' > /tmp/releases.json
-    cat /tmp/releases.json
+    if diff -q /tmp/NULL.json /tmp/release.json ; then
+        cat /tmp/all-release.json
+        exit 1
+    else
+        cat /tmp/releases.json
+    fi
     read -r name old_bin_date old_bin_hash < <(JQ --raw-output --arg name $EMACS_TARBALL '
         .assets | map(select(.name == $name)) | .[0].label' /tmp/releases.json)
     { read -r emacs_rev_date; read -r emacs_rev_hash; } < <(
