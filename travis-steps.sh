@@ -54,7 +54,7 @@ check_freshness() {
     }
     read -r name old_bin_date old_bin_hash < <(bin_data)
     commit_data() {
-        CURL "$mirror_path/commits?sha=${EMACS_REV}&per_page=1" |
+        CURL "${gh_auth[@]}" "$mirror_path/commits?sha=${EMACS_REV}&per_page=1" |
             tee /tmp/commit.json |
             JQ --raw-output '.[0] | (.commit.committer.date, .sha)'
         if [ "${PIPESTATUS[2]}" -eq 4 ] ; then
@@ -73,7 +73,7 @@ check_freshness() {
           $(date --date=$old_bin_date   +%s) ))
         echo "date_diff = $date_diff"
     fi
-    if [ "$old_bin_date" != never ] && ((date_diff < 7*24*60*60))
+    if [ "$old_bin_date" != never ] && ((date_diff < 24*60*60))
     then
         echo "${EMACS_REV} is sufficiently up to date." 1>&2
         echo "(it was last built ${old_bin_date}, source is from ${emacs_rev_date})" 1>&2
