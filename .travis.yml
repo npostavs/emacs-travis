@@ -9,7 +9,7 @@ env:
     - EMACS_REV=emacs-24.4
     - EMACS_REV=emacs-24.5
     - EMACS_REV=emacs-25.1
-    - EMACS_REV=emacs-25.1.90 EMACS_VERSION=25-prerelease
+    - EMACS_REV=emacs-25.1.91 EMACS_VERSION=25-prerelease
     - EMACS_REV=emacs-25
     - EMACS_REV=master
   global:
