@@ -7,7 +7,10 @@ github_token=$3
 
 prefix=/tmp/emacs
 srcdir=/tmp/emacs-${EMACS_REV}
-EMACSCONFFLAGS=(--with-x-toolkit=no --without-x
+mkdir -p /tmp/autoconf
+EMACSCONFFLAGS=(--cache-file=/tmp/autoconf/config.cache
+                --quiet --enable-silent-rules
+                --with-x-toolkit=no --without-x
                 # makeinfo is not available on the Travis VMs.
                 --without-makeinfo
                 # needed for Emacs 23.4 and lower
@@ -97,7 +100,7 @@ autogen() {
 }
 
 configure() {
-    cd "${srcdir}" && ./configure --quiet --enable-silent-rules --prefix="${HOME}" "${EMACSCONFFLAGS[@]}"
+    cd "${srcdir}" && ./configure "${EMACSCONFFLAGS[@]}"
 }
 
 do_make() {
