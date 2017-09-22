@@ -14,6 +14,7 @@ env:
     - EMACS_REV=emacs-24.5
     - EMACS_REV=emacs-25.1
     - EMACS_REV=emacs-25.2
+    - EMACS_REV=emacs-25.3
   global:
     - DISPOSE_OLD_BY=delete
     # travis encrypt -r npostavs/emacs-travis github_token=<emacs-builder token>
