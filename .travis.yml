@@ -1,5 +1,9 @@
 language: generic
 sudo: false
+cache:
+  timeout: 30 # caching only saves about a minute anyway
+  directories:
+    - /tmp/autoconf
 
 env:
   global:
