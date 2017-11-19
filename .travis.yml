@@ -7,8 +7,7 @@ cache:
 
 env:
   global:
-    - EMACS_REV=emacs-26.0.90
-    - EMACS_VERSION=26-prerelease
+    - EMACS_REV=emacs-25.3
 
 install:
   - . travis-steps.sh "$EMACS_REV" "$EMACS_VERSION"
