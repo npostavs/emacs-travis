@@ -7,7 +7,8 @@ cache:
 
 env:
   global:
-    - EMACS_REV=emacs-25.3
+    - EMACS_REV=emacs-26.0.90
+    - EMACS_VERSION=26-prerelease
 
 install:
   - . travis-steps.sh "$EMACS_REV" "$EMACS_VERSION"
@@ -23,7 +24,10 @@ install:
   - export PATH=/tmp/emacs/bin:${PATH}
 
 script:
-  - cd ${srcdir}/test/automated && make EMACS=emacs check
+  # remove bogus tests
+  - cd ${srcdir}/test && rm lisp/progmodes/elisp-mode-tests.el
+  - cd ${srcdir}/test && rm lisp/progmodes/flymake-tests.el
+  - cd ${srcdir}/test && make EMACS=emacs check
 
 
 notifications:
