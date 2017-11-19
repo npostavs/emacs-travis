@@ -23,7 +23,7 @@ install:
   - export PATH=/tmp/emacs/bin:${PATH}
 
 script:
-  - cd ${srcdir}/test && make EMACS=emacs check
+  - cd ${srcdir}/test/automated && make EMACS=emacs check
 
 
 notifications:
