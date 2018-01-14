@@ -9,7 +9,7 @@ prefix=/tmp/emacs
 srcdir=/tmp/emacs-${EMACS_REV}
 mkdir -p /tmp/autoconf
 EMACSCONFFLAGS=(--cache-file=/tmp/autoconf/config.cache
-                --quiet --enable-silent-rules
+                --enable-silent-rules
                 --with-x-toolkit=no --without-x
                 # makeinfo is not available on the Travis VMs.
                 --without-makeinfo
