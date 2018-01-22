@@ -1,4 +1,4 @@
-Pre-built Emacs for Travis CI.
+Pre-built Emacs binaries for Travis CI.
 
 Usage
 =====
@@ -41,18 +41,18 @@ script:
 ```
 
 This setup tests your Emacs Lisp project on Emacs 23.4, 24.5, 25.3,
-and the latest Emacs 'master' version (assuming you have a Makefile
-with a 'check' which runs your tests).  It includes code for
+and the latest Emacs `master` version (assuming you have a `Makefile`
+with a `check` target which runs your tests).  It includes code for
 installing cl-lib and ert for older Emacs versions, you can remove
 those steps if your package/tests don't depend on them (or your
 package requires newer Emacs versions which already include them).
 
 All point releases starting from 23.4 are also available if you want
 to test more versions in between.  Daily builds of from the git
-repository branches 'master' and 'emacs-26' are available as versions
-'master' and '26', respectively.  The latest pretest or release
-candidate from the 'emacs-26' branch is available as version
-'26-prerelease' (this is updated manually, so may lag by a few days).
+repository branches `master` and `emacs-26` are available as versions
+`master` and `26`, respectively.  The latest pretest or release
+candidate from the `emacs-26` branch is available as version
+`26-prerelease` (this is updated manually, so may lag by a few days).
 
 License
 -------

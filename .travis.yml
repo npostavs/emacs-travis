@@ -9,7 +9,6 @@ cache:
     - /tmp/autoconf
 env:
   matrix:
-    - EMACS_REV=emacs-25
     - EMACS_REV=emacs-26
     - EMACS_REV=master
   global:
