@@ -8,14 +8,14 @@ github_token=$3
 prefix=/tmp/emacs
 srcdir=/tmp/emacs-${EMACS_REV}
 mkdir -p /tmp/autoconf
-EMACSCONFFLAGS=(--cache-file=/tmp/autoconf/config.cache
+EMACSCONFFLAGS=(#--cache-file=/tmp/autoconf/config.cache
                 --quiet --enable-silent-rules
                 --with-x-toolkit=no --without-x
                 # makeinfo is not available on the Travis VMs.
                 --without-makeinfo
                 # needed for Emacs 23.4 and lower
                 --with-crt-dir=/usr/lib/x86_64-linux-gnu
-                CFLAGS='-O2 -march=native' --prefix="${prefix}")
+                CFLAGS='-O2' --prefix="${prefix}")
 
 EMACS_TARBALL=emacs-bin-${EMACS_VERSION}.tar.gz
 
