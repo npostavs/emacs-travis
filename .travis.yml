@@ -1,13 +1,13 @@
 language: generic
-sudo: false
+# require sudo because Emacs needs to disable ASLR to dump.
+# See also https://github.com/travis-ci/travis-ci/issues/9061.
+sudo: required
 cache:
   timeout: 30 # caching only saves about a minute anyway
   directories:
     - /tmp/autoconf
 env:
   matrix:
-    - EMACS_REV=emacs-25
-    - EMACS_REV=emacs-26
     - EMACS_REV=master
   global:
     - DISPOSE_OLD_BY=delete
