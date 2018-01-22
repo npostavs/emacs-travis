@@ -1,12 +1,4 @@
-emacs-travis.mk
-===============
-
-Install Emacs and its tooling on Travis CI.
-
-`emacs-travis.mk` is a small Makefile which provides targets to install Emacs
-stable and emacs-snapshot, Texinfo and Cask on the Docker-based infrastructure
-of Travis CI.  It compiles a minimal Emacs and Texinfo from source and installs
-them into `$HOME/bin`.
+Pre-built Emacs for Travis CI.
 
 Usage
 =====
@@ -14,64 +6,58 @@ Usage
 Add the following to your `.travis.yml`:
 
 ``` yaml
-language: emacs-lisp
+language: generic
 sudo: false
+
 env:
-  - EMACS_VERSION=24.3
-  - EMACS_VERSION=24.5
-  - EMACS_VERSION=snapshot
-before_install:
-  # Configure $PATH: Executables are installed to $HOME/bin
-  - export PATH="$HOME/bin:$PATH"
-  # Download the makefile to emacs-travis.mk
-  - wget 'https://raw.githubusercontent.com/flycheck/emacs-travis/master/emacs-travis.mk'
-  # Install Emacs (according to $EMACS_VERSION) and Cask
-  - make -f emacs-travis.mk install_emacs
-  - make -f emacs-travis.mk install_cask
-  # Install Texinfo, if you need to build info manuals for your project
-  - make -f emacs-travis.mk install_texinfo
+  matrix:
+    - EMACS_VERSION=23.4
+    - EMACS_VERSION=24.5
+    - EMACS_VERSION=25.3
+    - EMACS_VERSION=master
+  allow_failures:
+    - env: EMACS_VERSION=master
+
 install:
-  # Install your dependencies
-  - cask install
+  - curl -LO https://github.com/npostavs/emacs-travis/releases/download/bins/emacs-bin-${EMACS_VERSION}.tar.gz
+  - tar -xaf emacs-bin-${EMACS_VERSION}.tar.gz -C /
+  # Configure $PATH: Emacs installed to /tmp/emacs
+  - export PATH=/tmp/emacs/bin:${PATH}
+  # Install dependencies for older Emacs versions which lack them.
+  # Introduced in Emacs 24.3.
+  - if ! emacs -Q --batch --eval "(require 'cl-lib)" ; then
+        curl -Lo cl-lib.el http://elpa.gnu.org/packages/cl-lib-0.6.1.el ;
+    fi
+  # Introduced in Emacs 24.1
+  - if ! emacs -Q --batch --eval "(require 'ert)" ; then
+        curl -LO https://raw.githubusercontent.com/ohler/ert/c619b56c5bc6a866e33787489545b87d79973205/lisp/emacs-lisp/ert.el &&
+        curl -LO https://raw.githubusercontent.com/ohler/ert/c619b56c5bc6a866e33787489545b87d79973205/lisp/emacs-lisp/ert-x.el ;
+    fi
+  - emacs --version
+
 script:
-  # Run your tests
-  - cask exec ert-runner
+  - make
+  - make check
 ```
 
-This setup builds and tests your Emacs Lisp project on Emacs 24.3, 24.5 and the
-current Emacs snapshot from Git.
+This setup tests your Emacs Lisp project on Emacs 23.4, 24.5, 25.3,
+and the latest Emacs 'master' version (assuming you have a Makefile
+with a 'check' which runs your tests).  It includes code for
+installing cl-lib and ert for older Emacs versions, you can remove
+those steps if your package/tests don't depend on them (or your
+package requires newer Emacs versions which already include them).
 
-Reference
----------
-
-To install, download the `emacs-travis.mk` script in your `.travis.yml`, and run
-it with `make -f` as in the example above.
-
-Environment variables (set these in the `env:` section of your `.travis.yml`):
-
-- `$EMACS_VERSION`: The Emacs version to install.  Supports any released version
-  of GNU Emacs (tested with 24.1 and upwards), or the special value `snapshot`
-  to clone the latest `master` from Emacs’ Git.  Defaults to the latest stable
-  release of GNU Emacs.
-- `$TEXINFO_VERSION`: The Texinfo version to install.  Supports any released
-  version of GNU Texinfo (tested with 5.2 and upwards).  Defaults to the latest
-  stable release of GNU Texinfo.
-
-Additional environment variables (for special purposes):
-
-- `$EMACSCONFFLAGS`: Flags for `./configure` when building Emacs.  Defaults to
-  building a minimal Emacs, without almost all features
-
-Targets (for use in `before_install`):
-
-- `install_cask`: Install Cask
-- `install_emacs`: Install GNU Emacs, as per `$EMACS_VERSION`
-- `install_texinfo`: Install GNU Texinfo, as per `$TEXINFO_VERSION`
+All point releases starting from 23.4 are also available if you want
+to test more versions in between.  Daily builds of from the git
+repository branches 'master' and 'emacs-26' are available as versions
+'master' and '26', respectively.  The latest pretest or release
+candidate from the 'emacs-26' branch is available as version
+'26-prerelease' (this is updated manually, so may lag by a few days).
 
 License
 -------
 
-Copyright © 2015 Sebastian Wiesner <swiesner@lunaryorn.com>
+Copyright © 2015-2018 Noam Postavsky <npostavs@users.sourceforge.net>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
