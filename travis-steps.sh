@@ -1,7 +1,27 @@
 #!/source/me/in/bash
+# Copyright (C) 2015-2018 Noam Postavsky <npostavs@users.sourceforge.net>
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
 
 EMACS_REV=$1
 EMACS_VERSION=${2:-$(echo $EMACS_REV | sed 's/^emacs-//')}
+EMACS_MAJOR_VERSION=${EMACS_VERSION%%.*}
 github_token=$3
 
 
@@ -13,9 +33,12 @@ EMACSCONFFLAGS=(--cache-file=/tmp/autoconf/config.cache
                 --with-x-toolkit=no --without-x
                 # makeinfo is not available on the Travis VMs.
                 --without-makeinfo
-                # needed for Emacs 23.4 and lower
-                --with-crt-dir=/usr/lib/x86_64-linux-gnu
-                CFLAGS='-O2 -march=native' --prefix="${prefix}")
+                CFLAGS='-O2' --prefix="${prefix}")
+
+if [ "$EMACS_MAJOR_VERSION" -le 23 ] ; then
+    # needed for Emacs 23.4 and lower
+    EMACSCONFFLAGS+=(--with-crt-dir=/usr/lib/x86_64-linux-gnu)
+fi
 
 EMACS_TARBALL=emacs-bin-${EMACS_VERSION}.tar.gz
 
@@ -153,7 +176,8 @@ upload() {
 
 # show definitions for log
 printf ' (%s)' "${EMACSCONFFLAGS[@]}"
-printf '\n Binary releases path:  (%s)\n' "$binrel_path"
+printf '\n'
+printf ' Binary releases path:  (%s)\n' "$binrel_path"
 printf ' Emacs src mirror path: (%s)\n' "$mirror_path"
 printf ' VERSION: %s, TARBALL: %s\n' "$EMACS_VERSION" "$EMACS_TARBALL"
 printf ' JQ = %s\n' "$JQ"
