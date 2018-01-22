@@ -2,6 +2,7 @@
 
 EMACS_REV=$1
 EMACS_VERSION=${2:-$(echo $EMACS_REV | sed 's/^emacs-//')}
+EMACS_MAJOR_VERSION=${EMACS_VERSION%%.*}
 github_token=$3
 
 
@@ -13,9 +14,12 @@ EMACSCONFFLAGS=(--cache-file=/tmp/autoconf/config.cache
                 --with-x-toolkit=no --without-x
                 # makeinfo is not available on the Travis VMs.
                 --without-makeinfo
-                # needed for Emacs 23.4 and lower
-                --with-crt-dir=/usr/lib/x86_64-linux-gnu
-                CFLAGS='-O2 -march=native' --prefix="${prefix}")
+                CFLAGS='-O2' --prefix="${prefix}")
+
+if [ "$EMACS_MAJOR_VERSION" -le 23 ] ; then
+    # needed for Emacs 23.4 and lower
+    EMACSCONFFLAGS+=(--with-crt-dir=/usr/lib/x86_64-linux-gnu)
+fi
 
 EMACS_TARBALL=emacs-bin-${EMACS_VERSION}.tar.gz
 
@@ -153,7 +157,8 @@ upload() {
 
 # show definitions for log
 printf ' (%s)' "${EMACSCONFFLAGS[@]}"
-printf '\n Binary releases path:  (%s)\n' "$binrel_path"
+printf '\n'
+printf ' Binary releases path:  (%s)\n' "$binrel_path"
 printf ' Emacs src mirror path: (%s)\n' "$mirror_path"
 printf ' VERSION: %s, TARBALL: %s\n' "$EMACS_VERSION" "$EMACS_TARBALL"
 printf ' JQ = %s\n' "$JQ"
