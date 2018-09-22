@@ -44,9 +44,19 @@ fi
 EMACS_TARBALL=emacs-bin-${EMACS_VERSION}.tar.gz
 
 CURL() {
-    curl --dump-header \
-         >(tee $tmp/last-header.txt | sed -n '1p;/^X-RateLimit-Remaining/p' 1>&2) \
-         --silent --show-error --location "$@"
+    curl --dump-header $tmp/last-header.txt --silent --show-error --location "$@"
+}
+# Usage: [http-status-rx]
+CHECK_HEADERS() {
+    http_status_rx=${1:-2[0-9][0-9]}
+    if grep -q "^HTTP[^ ]* $http_status_rx" $tmp/last-header.txt ; then
+        # Show HTTP status and X-RateLimie-Remaining.
+        sed -n '1p;/^X-RateLimit-Remaining/p' $tmp/last-header.txt
+    else
+        # Show all in case of error.
+        cat $tmp/last-header.txt
+        exit 1
+    fi 1>&2
 }
 POST_FILE() {
     CURL -H 'Content-Type: application/octet-stream' --request POST \
@@ -159,12 +169,15 @@ UPLOAD_FILE() {
          "${gh_auth[@]}" --upload-file "$file" \
          "$url" --get \
          --data-urlencode "name=$basename" \
-         --data-urlencode "label=$label"
+         --data-urlencode "label=$label" > $tmp/upload.json
+    CHECK_HEADERS
+    JQ --raw-output .id $tmp/upload.json
 }
 # Usage: <file-id>
 DELETE_FILE() {
     CURL --request DELETE "${gh_auth[@]}" \
          $binrel_path/releases/assets/$1
+    CHECK_HEADERS
 }
 # Usage: <file-id> <new-name> [new-label]
 RENAME_FILE() {
@@ -173,6 +186,7 @@ RENAME_FILE() {
     data+="}"
     CURL --request PATCH "${gh_auth[@]}" \
          $binrel_path/releases/assets/$1 --data "$data"
+    CHECK_HEADERS
 }
 
 upload() {
@@ -182,17 +196,14 @@ upload() {
     echo "uploading... $EMACS_TARBALL $emacs_rev_date ${emacs_rev_hash:0:8}" >&2
     tmp_tarname=$EMACS_TARBALL.$emacs_rev_date
     mv "$tmp/$EMACS_TARBALL" "$tmp/$tmp_tarname"
-    UPLOAD_FILE "$tmp/$tmp_tarname" "${url}" \
-                "$EMACS_TARBALL $emacs_rev_date ${emacs_rev_hash:0:8}" > $tmp/upload.json
-    if grep -q '^HTTP[^ ]* 2[0-9][0-9]' $tmp/last-header.txt &&
-            read -r new_bin_id < <(JQ --raw-output .id $tmp/upload.json) &&
-            [ -n "$new_bin_id" ]
-    then
+    read -r new_bin_id < <(UPLOAD_FILE "$tmp/$tmp_tarname" "${url}"
+                           "$EMACS_TARBALL $emacs_rev_date ${emacs_rev_hash:0:8}")
+    if [ -n "$new_bin_id" ] ; then
         if [ "$old_bin_date" != never ] ; then
             read -r old_bin_id < <(JQ --raw-output --arg name $EMACS_TARBALL '
             .assets | map(select(.name == $name)) | .[0].id' $tmp/releases.json)
             echo "renaming old version... (id=$old_bin_id)" >&2
-            RENAME_FILE $old_bin_id "$name-old_date" "$label from $old_date"
+            RENAME_FILE $old_bin_id "$name-$old_date" "$label from $old_date"
         fi
 
         echo "renaming new version to canonical name... (id=$new_bin_id)" >&2
