@@ -196,7 +196,7 @@ upload() {
     echo "uploading... $EMACS_TARBALL $emacs_rev_date ${emacs_rev_hash:0:8}" >&2
     tmp_tarname=$EMACS_TARBALL.$emacs_rev_date
     mv "$tmp/$EMACS_TARBALL" "$tmp/$tmp_tarname"
-    read -r new_bin_id < <(UPLOAD_FILE "$tmp/$tmp_tarname" "${url}"
+    read -r new_bin_id < <(UPLOAD_FILE "$tmp/$tmp_tarname" "${url}" \
                            "$EMACS_TARBALL $emacs_rev_date ${emacs_rev_hash:0:8}")
     if [ -n "$new_bin_id" ] ; then
         if [ "$old_bin_date" != never ] ; then
