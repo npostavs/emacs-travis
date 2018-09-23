@@ -194,7 +194,10 @@ upload() {
 
     # upload the new version
     echo "uploading... $EMACS_TARBALL $emacs_rev_date ${emacs_rev_hash:0:8}" >&2
-    tmp_tarname=$EMACS_TARBALL.$emacs_rev_date
+    # NOTE: Putting colons triggers in the filename triggers some kind
+    # of strange Github bug, where the part after the colon can't be
+    # renamed away again!
+    tmp_tarname=$EMACS_TARBALL.${emacs_rev_date//:/.}
     mv "$tmp/$EMACS_TARBALL" "$tmp/$tmp_tarname"
     read -r new_bin_id < <(UPLOAD_FILE "$tmp/$tmp_tarname" "${url}" \
                            "$EMACS_TARBALL $emacs_rev_date ${emacs_rev_hash:0:8}")
@@ -203,7 +206,7 @@ upload() {
             read -r old_bin_id < <(JQ --raw-output --arg name $EMACS_TARBALL '
             .assets | map(select(.name == $name)) | .[0].id' $tmp/releases.json)
             echo "renaming old version... (id=$old_bin_id)" >&2
-            RENAME_FILE $old_bin_id "$name-$old_date" "$label from $old_date"
+            RENAME_FILE $old_bin_id "$name-$old_bin_date" "$label from $old_bin_date"
         fi
 
         echo "renaming new version to canonical name... (id=$new_bin_id)" >&2
