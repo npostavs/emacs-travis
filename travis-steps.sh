@@ -207,10 +207,10 @@ upload() {
 
     # upload the new version
     echo "uploading... $EMACS_TARBALL $emacs_rev_date ${emacs_rev_hash:0:8}" >&2
-    # NOTE: Putting colons triggers in the filename triggers some kind
-    # of strange Github bug, where the part after the colon can't be
-    # renamed away again!
-    tmp_tarname=TEST_$EMACS_TARBALL.${emacs_rev_date//:/.}
+    # NOTE: Github sees to have somme kind of bug/feature where the
+    # "original extension" can't be changed by rename.  So put the
+    # temp name part in front, not at the end.
+    tmp_tarname=$emacs_rev_date.TEST_$EMACS_TARBALL
     mv "$tmp/$EMACS_TARBALL" "$tmp/$tmp_tarname"
     read -r new_bin_id < <(UPLOAD_FILE "$tmp/$tmp_tarname" "${url}" \
                            "$EMACS_TARBALL $emacs_rev_date ${emacs_rev_hash:0:8}")
