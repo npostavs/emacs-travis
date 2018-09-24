@@ -28,7 +28,7 @@ before_install:
   # - do_make
   # - do_make install | grep -E '^(make|[A-Z])'
   # - pack
-  - touch /tmp/$EMACS_TARBALL
+  - echo foo > /tmp/$EMACS_TARBALL
   - upload
 script:
   - emacs --version
