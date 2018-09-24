@@ -9,7 +9,7 @@ cache:
     - /tmp/autoconf
 env:
   matrix:
-    - EMACS_REV=emacs-26
+    # - EMACS_REV=emacs-26
     - EMACS_REV=master
   global:
     - DISPOSE_OLD_BY=delete
@@ -21,13 +21,14 @@ before_install:
   - . travis-steps.sh "$EMACS_REV" "$EMACS_VERSION" "$github_token"
   - get_jq
   - check_freshness
-  - download
-  - unpack
-  - autogen
-  - configure
-  - do_make
-  - do_make install | grep -E '^(make|[A-Z])'
-  - pack
+  # - download
+  # - unpack
+  # - autogen
+  # - configure
+  # - do_make
+  # - do_make install | grep -E '^(make|[A-Z])'
+  # - pack
+  - touch /tmp/$EMACS_TARBALL
   - upload
 script:
   - emacs --version
