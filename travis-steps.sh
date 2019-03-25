@@ -40,6 +40,9 @@ if [ "$EMACS_MAJOR_VERSION" -le 23 ] ; then
     # needed for Emacs 23.4 and lower
     EMACSCONFFLAGS+=(--with-crt-dir=/usr/lib/x86_64-linux-gnu)
 fi
+if [ "$EMACS_MAJOR_VERSION" -ge 25 ] ; then
+    EMACSCONFFLAGS+=(--with-modules)
+fi
 
 EMACS_TARBALL=emacs-bin-${EMACS_VERSION}.tar.gz
 
