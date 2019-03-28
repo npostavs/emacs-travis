@@ -21,7 +21,14 @@
 
 EMACS_REV=$1
 EMACS_VERSION=${2:-$(echo $EMACS_REV | sed 's/^emacs-//')}
-EMACS_MAJOR_VERSION=${EMACS_VERSION%%.*}
+if [ "$EMACS_VERSION" = master ] ; then
+    # We can't compute correct version without downloading the tarball
+    # first, and we need the value now.  To avoid having to update a
+    # hardcoded value as Emacs progresses, just use a big number.
+    EMACS_MAJOR_VERSION=999
+else
+    EMACS_MAJOR_VERSION=${EMACS_VERSION%%.*}
+fi
 github_token=$3
 tmp=${4:-/tmp}
 
