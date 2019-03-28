@@ -21,14 +21,22 @@
 
 EMACS_REV=$1
 EMACS_VERSION=${2:-$(echo $EMACS_REV | sed 's/^emacs-//')}
-EMACS_MAJOR_VERSION=${EMACS_VERSION%%.*}
+if [ "$EMACS_VERSION" = master ] ; then
+    # We can't compute correct version without downloading the tarball
+    # first, and we need the value now.  To avoid having to update a
+    # hardcoded value as Emacs progresses, just use a big number.
+    EMACS_MAJOR_VERSION=999
+else
+    EMACS_MAJOR_VERSION=${EMACS_VERSION%%.*}
+fi
 github_token=$3
+tmp=${4:-/tmp}
 
 
-prefix=/tmp/emacs
-srcdir=/tmp/emacs-${EMACS_REV}
-mkdir -p /tmp/autoconf
-EMACSCONFFLAGS=(--cache-file=/tmp/autoconf/config.cache
+prefix=$tmp/emacs
+srcdir=$tmp/emacs-${EMACS_REV}
+mkdir -p $tmp/autoconf
+EMACSCONFFLAGS=(--cache-file=$tmp/autoconf/config.cache
                 --quiet --enable-silent-rules
                 --with-x-toolkit=no --without-x
                 # makeinfo is not available on the Travis VMs.
@@ -39,13 +47,26 @@ if [ "$EMACS_MAJOR_VERSION" -le 23 ] ; then
     # needed for Emacs 23.4 and lower
     EMACSCONFFLAGS+=(--with-crt-dir=/usr/lib/x86_64-linux-gnu)
 fi
+if [ "$EMACS_MAJOR_VERSION" -ge 25 ] ; then
+    EMACSCONFFLAGS+=(--with-modules)
+fi
 
 EMACS_TARBALL=emacs-bin-${EMACS_VERSION}.tar.gz
 
 CURL() {
-    curl --dump-header \
-         >(tee /tmp/last-header.txt | sed -n '1p;/^X-RateLimit/p' 1>&2) \
-         --silent --show-error --location "$@"
+    curl --dump-header $tmp/last-header.txt --silent --show-error --location "$@"
+}
+# Usage: [http-status-rx]
+CHECK_HEADERS() {
+    http_status_rx=${1:-2[0-9][0-9]}
+    if grep -q "^HTTP[^ ]* $http_status_rx" $tmp/last-header.txt ; then
+        # Show HTTP status and X-RateLimie-Remaining.
+        sed -n '1p;/^X-RateLimit-Remaining/p' $tmp/last-header.txt
+    else
+        # Show all in case of error.
+        cat $tmp/last-header.txt
+        exit 1
+    fi 1>&2
 }
 POST_FILE() {
     CURL -H 'Content-Type: application/octet-stream' --request POST \
@@ -61,32 +82,30 @@ mirror_path=https://api.github.com/repos/emacs-mirror/emacs
 binrel_path=https://api.github.com/repos/npostavs/emacs-travis
 
 check_freshness() {
-    echo null > /tmp/NULL.json
-    CURL "${gh_auth[@]}" $binrel_path/releases | tee /tmp/all-release.json |
-        JQ 'map(select(.name == "Binaries")) | .[0]' > /tmp/releases.json
-    if diff -q /tmp/NULL.json /tmp/releases.json >/dev/null ; then
-        cat /tmp/all-release.json
+    if ! CURL "${gh_auth[@]}" $binrel_path/releases | tee $tmp/all-release.json |
+            JQ 'map(select(.name == "Binaries")) | .[0]' > $tmp/releases.json ; then
+        cat $tmp/all-release.json
         exit 1
     fi
     bin_data() {
         JQ --raw-output --arg name $EMACS_TARBALL \
-           '.assets | map(select(.name == $name)) | .[0].label' /tmp/releases.json
-        if [ $? -eq 4 ] ; then
+           '.assets | map(select(.name == $name)) | .[0].label' $tmp/releases.json
+        if [ $? -eq 4 ] ; then # jq --exit-status (4 == no result at all)
             echo "Failed to get binary data!"
-            cat /tmp/last-header.txt
-            cat /tmp/releases.json
+            cat $tmp/last-header.txt
+            cat $tmp/releases.json
             exit 1
         fi 1>&2
     }
     read -r name old_bin_date old_bin_hash < <(bin_data)
     commit_data() {
         CURL "${gh_auth[@]}" "$mirror_path/commits?sha=${EMACS_REV}&per_page=1" |
-            tee /tmp/commit.json |
+            tee $tmp/commit.json |
             JQ --raw-output '.[0] | (.commit.committer.date, .sha)'
         if [ "${PIPESTATUS[2]}" -eq 4 ] ; then
             echo "Failed to get commit data!"
-            cat /tmp/last-header.txt
-            cat /tmp/commit.json
+            cat $tmp/last-header.txt
+            cat $tmp/commit.json
             exit 1
         fi 1>&2
     }
@@ -111,10 +130,10 @@ check_freshness() {
 }
 download() {
     url=https://github.com/emacs-mirror/emacs/archive
-    CURL -o "/tmp/${EMACS_REV}.tar.gz" "$url/${EMACS_REV}.tar.gz"
+    CURL -o "$tmp/${EMACS_REV}.tar.gz" "$url/${EMACS_REV}.tar.gz"
 }
 unpack() {
-    tar xzf "/tmp/${EMACS_REV}.tar.gz" -C /tmp
+    tar xzf "$tmp/${EMACS_REV}.tar.gz" -C $tmp
 }
 autogen() {
     # Emacs 23.4 (and lower) have ./configure checked in to the
@@ -136,7 +155,7 @@ JQ() {
 if JQ=$(which jq) ; then
     get_jq() { JQ --version; }
 else
-    JQ=/tmp/bin/jq
+    JQ=$tmp/bin/jq
     get_jq() {
         mkdir -p "$(dirname "${JQ}")"
         CURL -o "${JQ}" https://stedolan.github.io/jq/download/linux64/jq &&
@@ -146,32 +165,72 @@ else
 fi
 
 pack() {
-    tar -caPf "/tmp/$EMACS_TARBALL" "${prefix}"
-    ls -lh "/tmp/$EMACS_TARBALL"
+    tar -caPf "$tmp/$EMACS_TARBALL" "${prefix}"
+    ls -lh "$tmp/$EMACS_TARBALL"
+}
+
+# Usage: <file> <upload-url> [label]
+UPLOAD_FILE() {
+    file=$1
+    url=$2
+    basename=$(basename $file)
+    label=${3:-$basename}
+    CURL -H 'Content-Type: application/octet-stream' --request POST \
+         "${gh_auth[@]}" --upload-file "$file" \
+         "$url" --get \
+         --data-urlencode "name=$basename" \
+         --data-urlencode "label=$label" > $tmp/upload.json
+    CHECK_HEADERS
+    JQ --raw-output .id $tmp/upload.json
+}
+# Usage: <file-id>
+DELETE_FILE() {
+    CURL --request DELETE "${gh_auth[@]}" \
+         $binrel_path/releases/assets/$1
+    CHECK_HEADERS
+}
+# Usage: <file-id> <new-name> [new-label]
+RENAME_FILE() {
+    data="{\"name\": \"$2\""
+    [ -n "$3" ] && data+=", \"label\": \"$3\""
+    data+="}"
+    CURL --request PATCH "${gh_auth[@]}" \
+         $binrel_path/releases/assets/$1 --data "$data"
+    CHECK_HEADERS
 }
 
 upload() {
-    read -r url < <(JQ --raw-output '.upload_url / "{?" | .[0]' /tmp/releases.json)
-
-    if [ "$old_bin_date" != never ] ; then
-        read -r old_bin_id < <(JQ --raw-output --arg name $EMACS_TARBALL '
-            .assets | map(select(.name == $name)) | .[0].id' /tmp/releases.json)
-        if [ "$DISPOSE_OLD_BY" == rename ] ; then
-            echo "renaming old version... (id=$old_bin_id)" >&2
-            CURL --request PATCH "${gh_auth[@]}" $binrel_path/releases/assets/$old_bin_id --data \
-                 "{\"name\": \"$name-$old_date\", \"label\": \"$label from $old_date\"}"
-        elif [ "$DISPOSE_OLD_BY" == delete ] ; then
-            echo "deleting old version... (id=$old_bin_id)" >&2
-            CURL --request DELETE "${gh_auth[@]}" $binrel_path/releases/assets/$old_bin_id
-        fi
-    fi
+    read -r url < <(JQ --raw-output '.upload_url / "{?" | .[0]' $tmp/releases.json)
 
     # upload the new version
     echo "uploading... $EMACS_TARBALL $emacs_rev_date ${emacs_rev_hash:0:8}" >&2
-    POST_FILE "/tmp/$EMACS_TARBALL" "${url}" -i --get \
-              --data-urlencode "name=$EMACS_TARBALL" \
-              --data-urlencode \
-              "label=$EMACS_TARBALL $emacs_rev_date ${emacs_rev_hash:0:8}"
+    # NOTE: Github sees to have somme kind of bug/feature where the
+    # "original extension" can't be changed by rename.  So put the
+    # temp name part in front, not at the end.
+    tmp_tarname=$emacs_rev_date.$EMACS_TARBALL
+    mv "$tmp/$EMACS_TARBALL" "$tmp/$tmp_tarname"
+    read -r new_bin_id < <(UPLOAD_FILE "$tmp/$tmp_tarname" "${url}" \
+                           "$EMACS_TARBALL $emacs_rev_date ${emacs_rev_hash:0:8}")
+    if [ -n "$new_bin_id" ] ; then
+        if [ "$old_bin_date" != never ] ; then
+            read -r old_bin_id < <(JQ --raw-output --arg name $EMACS_TARBALL '
+            .assets | map(select(.name == $name)) | .[0].id' $tmp/releases.json)
+            echo "renaming old version... (id=$old_bin_id)" >&2
+            RENAME_FILE $old_bin_id "$name-$old_bin_date" "$label from $old_bin_date"
+        fi
+
+        echo "renaming new version to canonical name... (id=$new_bin_id)" >&2
+        RENAME_FILE $new_bin_id "$EMACS_TARBALL"
+
+        if [ "$old_bin_date" != never ] && [ "$DISPOSE_OLD_BY" == delete ] ; then
+            echo "deleting old version... (id=$old_bin_id)" >&2
+            DELETE_FILE $old_bin_id
+        fi
+    else
+        # Failed to upload.
+        JQ . $tmp/upload.json
+        return 1
+    fi
 }
 
 # show definitions for log
