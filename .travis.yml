@@ -36,6 +36,8 @@ before_install:
   - do_make install | grep -E '^(make|[A-Z])'
   - pack
   - upload
+  - replace_old
+  - delete_old
 script:
   - emacs --version
 
