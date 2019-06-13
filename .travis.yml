@@ -1,47 +1,26 @@
 language: generic
-# Require sudo because Emacs needs to disable ASLR to dump, only
-# possible on sudo-enabled environment.  See also
-# https://github.com/travis-ci/travis-ci/issues/9061.
-sudo: required
-cache:
-  timeout: 30 # caching only saves about a minute anyway
-  directories:
-    - /tmp/autoconf
-env:
-  matrix:
-    - EMACS_REV=emacs-26
-    - EMACS_REV=master
-  global:
-    # travis encrypt -r npostavs/emacs-travis github_token=<emacs-builder token>
-    - secure: "enH7+7R0YgipY7XHLoskFsztGUiiZMFQ+BBInEYVQHRt2jVabF6+fDcByTpMqFgR4XmpVzaph4HCVIy3t6R5s794IYa6VNw4+cF9g+7Su0pxGxWqpGOLeabeXYfqeRLMOjS3lADe1/UJ+4cBh0+e1lyToqBLjO2bE35/IqftgIAjElRkL0DXi0be/D6mBnsehDceTYSq4xET/qcgK5tWgZUsmexI+Ks1fb46E7YPoiSa6+kfrDZ7qjfW40GF0YgJyRtHyagggOKglyechh1uC6VMaByEJuFuKJ2iu+BdDMc183PQ1j4/DCKJAJ46LNQOGneXe8qNDcK4tNJmghObVLhGXSjNyCASENaVdeiftuUxEXENDF3d4XFVrTAGSwGRyboxG2n41tJq72RGYocHWLfN9dow0bp6viTYq4KdNObXq+/z2RbuhvlZ1yGl9H/abBe112zeVdiNR6KCgz/dQzasP/dnGORhORmuSWhs/D7k0VpwIGs1OINhqtsPcMQ5+ETOyRshtlBTAbW4VB/0nU92P8bM4762d3we5vP4/zfiL49hOgLgaJasgLCnUQ4hT9PPRB6JLIwp6RxOTWQ5wp82rVq+Xo9ekHcJmDtmrn/frvD8z6qPVkS7dv2R9ELidDmJLam5I5sL7hDFCiTsu+U+ueMxLLCeJIJW2gOlllk="
+sudo: false
 
-# Emacs require libgnutls to build by default, so we probably want
-# that for testing binaries.
-addons:
-  apt:
-    packages:
-      - libgnutls-dev
-
-before_install:
+install:
+  - curl -LO https://github.com/npostavs/emacs-travis/releases/download/bins/2019-06-12T11.56.27Z.emacs-bin-26.tar.gz
+  - tar -xaf 2019-06-12T11.56.27Z.emacs-bin-26.tar.gz -C /
   # Configure $PATH: Emacs installed to /tmp/emacs
   - export PATH=/tmp/emacs/bin:${PATH}
-  - . travis-steps.sh "$EMACS_REV" "$EMACS_VERSION" "$github_token"
-  - get_jq
-  - check_freshness
-  - download
-  - unpack
-  - autogen
-  - configure
-  - do_make
-  - do_make install | grep -E '^(make|[A-Z])'
-  - pack
-  - upload
-  # - replace_old
-  # - delete_old
-script:
-  - emacs --version
+  # Install dependencies for older Emacs versions which lack them.
+  # Introduced in Emacs 24.3.
+  - if ! emacs -Q --batch --eval "(require 'cl-lib)" ; then
+        curl -Lo cl-lib.el http://elpa.gnu.org/packages/cl-lib-0.6.1.el ;
+    fi
+  # Introduced in Emacs 24.1
+  - if ! emacs -Q --batch --eval "(require 'ert)" ; then
+        curl -LO https://raw.githubusercontent.com/ohler/ert/c619b56c5bc6a866e33787489545b87d79973205/lisp/emacs-lisp/ert.el &&
+        curl -LO https://raw.githubusercontent.com/ohler/ert/c619b56c5bc6a866e33787489545b87d79973205/lisp/emacs-lisp/ert-x.el ;
+    fi
 
-notifications:
-  email:
-    on_success: never
-    on_failure: never
+script:
+  - ldd $(which emacs)
+  - emacs --version
+  - emacs --batch --eval '(print libgnutls-version)'
+  - emacs --batch --eval '(princ (gnutls-available-p))'
+
+
