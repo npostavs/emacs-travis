@@ -19,7 +19,7 @@ before_install:
   - check_freshness
   # Emacs require libgnutls to build by default, so we probably want
   # that for testing binaries (do this after check_freshness).
-  - apt-get install -y libgnutls-dev
+  - sudo apt-get install -y libgnutls-dev
   - download
   - unpack
   - autogen
