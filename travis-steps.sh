@@ -212,24 +212,30 @@ upload() {
     read -r new_bin_id < <(UPLOAD_FILE "$tmp/$tmp_tarname" "${url}" \
                            "$EMACS_TARBALL $emacs_rev_date ${emacs_rev_hash:0:8}")
     if [ -n "$new_bin_id" ] ; then
-        if [ "$old_bin_date" != never ] ; then
-            read -r old_bin_id < <(JQ --raw-output --arg name $EMACS_TARBALL '
-            .assets | map(select(.name == $name)) | .[0].id' $tmp/releases.json)
-            echo "renaming old version... (id=$old_bin_id)" >&2
-            RENAME_FILE $old_bin_id "$name-$old_bin_date" "$label from $old_bin_date"
-        fi
-
-        echo "renaming new version to canonical name... (id=$new_bin_id)" >&2
-        RENAME_FILE $new_bin_id "$EMACS_TARBALL"
-
-        if [ "$old_bin_date" != never ] && [ "$DISPOSE_OLD_BY" == delete ] ; then
-            echo "deleting old version... (id=$old_bin_id)" >&2
-            DELETE_FILE $old_bin_id
-        fi
+        echo "$new_bin_id"
     else
         # Failed to upload.
-        JQ . $tmp/upload.json
+        JQ . $tmp/upload.json >&2
         return 1
+    fi
+}
+
+replace_old() {
+    if [ "$old_bin_date" != never ] ; then
+        read -r old_bin_id < <(JQ --raw-output --arg name $EMACS_TARBALL '
+            .assets | map(select(.name == $name)) | .[0].id' $tmp/releases.json)
+        echo "renaming old version... (id=$old_bin_id)" >&2
+        RENAME_FILE $old_bin_id "$name-$old_bin_date" "$name from $old_bin_date"
+    fi
+
+    echo "renaming new version to canonical name... (id=$new_bin_id)" >&2
+    RENAME_FILE $new_bin_id "$EMACS_TARBALL"
+}
+
+delete_old() {
+    if [ "$old_bin_date" != never ] ; then
+        echo "deleting old version... (id=$old_bin_id)" >&2
+        DELETE_FILE $old_bin_id
     fi
 }
 
