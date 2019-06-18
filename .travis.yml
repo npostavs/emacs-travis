@@ -21,6 +21,8 @@ before_install:
   - sudo apt-get install -y libgnutls-dev
   - download
   - unpack
+  # We don't need warnings about gets().
+  - (cd $srcdir && sed -i 's/^gl_INIT$/gl_INIT\nGNULIB_GETS=0/' configure.in)
   - autogen
   - configure
   - do_make
