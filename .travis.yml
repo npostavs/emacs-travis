@@ -26,12 +26,13 @@ before_install:
   - configure
   - do_make
   - do_make install | grep -E '^(make|[A-Z])'
+script:
+  - emacs --version
+after_success:
   - pack
   - upload
   - replace_old
   - delete_old
-script:
-  - emacs --version
 
 notifications:
   email:
