@@ -138,7 +138,14 @@ unpack() {
 autogen() {
     # Emacs 23.4 (and lower) have ./configure checked in to the
     # repository already.
-    cd "${srcdir}" && [ -x ./configure ] || ./autogen.sh
+    cd "${srcdir}" && if ! [ -x ./configure ]; then
+        # Turn off gets() check for old versions.  We don't need it
+        # and it breaks the build in 24.1 (newer versions have
+        # configure.ac instead of configure.in, but the gets() check
+        # is already fixed there anyway).
+        [ -r configure.in ] && sed -i 's/^gl_INIT$/gl_INIT\nGNULIB_GETS=0/' configure.in
+        ./autogen.sh
+    fi
 }
 
 configure() {
