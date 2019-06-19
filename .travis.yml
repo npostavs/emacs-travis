@@ -6,6 +6,7 @@ cache:
 env:
   matrix:
     - EMACS_REV=emacs-26
+    - EMACS_REV=emacs-27
     - EMACS_REV=master
   global:
     # travis encrypt -r npostavs/emacs-travis github_token=<emacs-builder token>
