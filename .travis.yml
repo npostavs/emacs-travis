@@ -16,7 +16,7 @@ env:
     - EMACS_REV=emacs-25.3
     - EMACS_REV=emacs-26.1
     - EMACS_REV=emacs-26.2
-    - EMACS_REV=emacs-26.2.90 EMACS_VERSION=26-prerelease
+    - EMACS_REV=emacs-26.3-rc1 EMACS_VERSION=26-prerelease
   global:
     # travis encrypt -r npostavs/emacs-travis github_token=<emacs-builder token>
     - secure: "enH7+7R0YgipY7XHLoskFsztGUiiZMFQ+BBInEYVQHRt2jVabF6+fDcByTpMqFgR4XmpVzaph4HCVIy3t6R5s794IYa6VNw4+cF9g+7Su0pxGxWqpGOLeabeXYfqeRLMOjS3lADe1/UJ+4cBh0+e1lyToqBLjO2bE35/IqftgIAjElRkL0DXi0be/D6mBnsehDceTYSq4xET/qcgK5tWgZUsmexI+Ks1fb46E7YPoiSa6+kfrDZ7qjfW40GF0YgJyRtHyagggOKglyechh1uC6VMaByEJuFuKJ2iu+BdDMc183PQ1j4/DCKJAJ46LNQOGneXe8qNDcK4tNJmghObVLhGXSjNyCASENaVdeiftuUxEXENDF3d4XFVrTAGSwGRyboxG2n41tJq72RGYocHWLfN9dow0bp6viTYq4KdNObXq+/z2RbuhvlZ1yGl9H/abBe112zeVdiNR6KCgz/dQzasP/dnGORhORmuSWhs/D7k0VpwIGs1OINhqtsPcMQ5+ETOyRshtlBTAbW4VB/0nU92P8bM4762d3we5vP4/zfiL49hOgLgaJasgLCnUQ4hT9PPRB6JLIwp6RxOTWQ5wp82rVq+Xo9ekHcJmDtmrn/frvD8z6qPVkS7dv2R9ELidDmJLam5I5sL7hDFCiTsu+U+ueMxLLCeJIJW2gOlllk="
