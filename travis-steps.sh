@@ -204,13 +204,25 @@ upload() {
 
     # upload the new version
     echo "uploading... $EMACS_TARBALL $emacs_rev_date ${emacs_rev_hash:0:8}" >&2
-    # NOTE: Github sees to have somme kind of bug/feature where the
+    # NOTE: Github sees to have some kind of bug/feature where the
     # "original extension" can't be changed by rename.  So put the
     # temp name part in front, not at the end.
     tmp_tarname=$emacs_rev_date.$EMACS_TARBALL
     mv "$tmp/$EMACS_TARBALL" "$tmp/$tmp_tarname"
     read -r new_bin_id < <(UPLOAD_FILE "$tmp/$tmp_tarname" "${url}" \
                            "$EMACS_TARBALL $emacs_rev_date ${emacs_rev_hash:0:8}")
+
+    # Seems to return HTTP 100 contine, unclear what the real return
+    # value ends up as.
+    echo UPLOAD_FILE last-header.txt >&2
+    echo =================== >&2
+    cat $tmp/last-header.txt >&2
+    echo =================== >&2
+    echo UPLOAD_FILE output >&2
+    echo =================== >&2
+    cat $tmp/upload.json >&2
+    echo =================== >&2
+
     if [ -n "$new_bin_id" ] ; then
         echo "$new_bin_id"
     else
