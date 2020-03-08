@@ -14,6 +14,8 @@ env:
     - EMACS_VERSION=24.5
     - EMACS_VERSION=25.3
     - EMACS_VERSION=master
+
+jobs:
   allow_failures:
     - env: EMACS_VERSION=master
 
