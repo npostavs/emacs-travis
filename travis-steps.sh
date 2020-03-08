@@ -59,13 +59,15 @@ CURL() {
 # Usage: [http-status-rx]
 CHECK_HEADERS() {
     http_status_rx=${1:-2[0-9][0-9]}
-    if grep -q "^HTTP[^ ]* $http_status_rx" $tmp/last-header.txt ; then
-        # Show HTTP status and X-RateLimie-Remaining.
-        sed -n '1p;/^X-RateLimit-Remaining/p' $tmp/last-header.txt
+    # There can be multiple HTTP 100 "continue" statuses.
+    last_status=$(grep '^HTTP' $tmp/last-header.txt | tail -1)
+    if echo "$last_status" | grep -q "^HTTP[^ ]* $http_status_rx" ; then
+        # Show HTTP status and X-RateLimit-Remaining.
+        sed -n '/^\(HTTP\|X-RateLimit-Remaining\)/p' $tmp/last-header.txt
     else
         # Show all in case of error.
         cat $tmp/last-header.txt
-        exit 1
+        return 1
     fi 1>&2
 }
 POST_FILE() {
@@ -180,8 +182,8 @@ UPLOAD_FILE() {
          "$url" --get \
          --data-urlencode "name=$basename" \
          --data-urlencode "label=$label" > $tmp/upload.json
-    CHECK_HEADERS
-    JQ --raw-output .id $tmp/upload.json
+    CHECK_HEADERS &&
+        JQ --raw-output .id $tmp/upload.json
 }
 # Usage: <file-id>
 DELETE_FILE() {
@@ -212,19 +214,8 @@ upload() {
     read -r new_bin_id < <(UPLOAD_FILE "$tmp/$tmp_tarname" "${url}" \
                            "$EMACS_TARBALL $emacs_rev_date ${emacs_rev_hash:0:8}")
 
-    # Seems to return HTTP 100 contine, unclear what the real return
-    # value ends up as.
-    echo UPLOAD_FILE last-header.txt >&2
-    echo =================== >&2
-    cat $tmp/last-header.txt >&2
-    echo =================== >&2
-    echo UPLOAD_FILE output >&2
-    echo =================== >&2
-    cat $tmp/upload.json >&2
-    echo =================== >&2
-
     if [ -n "$new_bin_id" ] ; then
-        echo "$new_bin_id"
+        echo "new bin id = $new_bin_id" >&2
     else
         # Failed to upload.
         JQ . $tmp/upload.json >&2

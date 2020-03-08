@@ -31,9 +31,10 @@ script:
   - emacs --version
 after_success:
   - pack
-  - upload
-  - replace_old
-  - delete_old
+  # NOTE: after_success commands keep going even if one fails.
+  - upload; upload_error=$?
+  - [ $upload_error -eq 0 ] && replace_old
+  - [ $upload_error -eq 0 ] && delete_old
 
 notifications:
   email:
