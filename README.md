@@ -8,8 +8,13 @@ Add the following to your `.travis.yml`:
 ``` yaml
 language: generic
 
+# This is the default, make it explicit so that we are not caught by a
+# change in the default.
+os: linux
+dist: xenial
+
 env:
-  matrix:
+  jobs:
     - EMACS_VERSION=23.4
     - EMACS_VERSION=24.5
     - EMACS_VERSION=25.3

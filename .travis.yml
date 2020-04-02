@@ -1,10 +1,16 @@
 language: generic
+
+# This is the default, make it explicit so that we are not caught by a
+# change in the default.
+os: linux
+dist: xenial
+
 cache:
   timeout: 30 # caching only saves about a minute anyway
   directories:
     - /tmp/autoconf
 env:
-  matrix:
+  jobs:
     - EMACS_REV=emacs-26
     - EMACS_REV=emacs-27
     - EMACS_REV=master
@@ -33,8 +39,8 @@ after_success:
   - pack
   # NOTE: after_success commands keep going even if one fails.
   - upload; upload_error=$?
-  - [ $upload_error -eq 0 ] && replace_old
-  - [ $upload_error -eq 0 ] && delete_old
+  - test $upload_error -eq 0 && replace_old
+  - test $upload_error -eq 0 && delete_old
 
 notifications:
   email:
