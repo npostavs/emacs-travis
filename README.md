@@ -7,14 +7,20 @@ Add the following to your `.travis.yml`:
 
 ``` yaml
 language: generic
-sudo: false
+
+# This is the default, make it explicit so that we are not caught by a
+# change in the default.
+os: linux
+dist: xenial
 
 env:
-  matrix:
+  jobs:
     - EMACS_VERSION=23.4
     - EMACS_VERSION=24.5
     - EMACS_VERSION=25.3
     - EMACS_VERSION=master
+
+jobs:
   allow_failures:
     - env: EMACS_VERSION=master
 
@@ -43,21 +49,21 @@ script:
 This setup tests your Emacs Lisp project on Emacs 23.4, 24.5, 25.3,
 and the latest Emacs `master` version (assuming you have a `Makefile`
 with a `check` target which runs your tests).  It includes code for
-installing cl-lib and ert for older Emacs versions, you can remove
+installing `cl-lib` and `ert` for older Emacs versions, you can remove
 those steps if your package/tests don't depend on them (or your
 package requires newer Emacs versions which already include them).
 
 All point releases starting from 23.4 are also available if you want
 to test more versions in between.  Daily builds of from the git
-repository branches `master` and `emacs-26` are available as versions
-`master` and `26`, respectively.  The latest pretest or release
-candidate from the `emacs-26` branch is available as version
-`26-prerelease` (this is updated manually, so may lag by a few days).
+repository branches `master` and `emacs-27` are available as versions
+`master` and `27`, respectively.  The latest pretest or release
+candidate from the `emacs-27` branch is available as version
+`27-prerelease` (this is updated manually, so may lag by a few days).
 
 License
 -------
 
-Copyright © 2015-2018 Noam Postavsky <npostavs@users.sourceforge.net>
+Copyright © 2015-2020 Noam Postavsky <npostavs@users.sourceforge.net>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
